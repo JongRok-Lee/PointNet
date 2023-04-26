@@ -1,7 +1,14 @@
 # PointNet.pytorch
 This repo is implementation for PointNet(https://arxiv.org/abs/1612.00593) in pytorch. The model is in `pointnet/model.py`.
 
-It is tested with pytorch-1.0.
+It is tested with pytorch 1.x and 2.0.
+
+# Conda Environment
+  
+  ```
+  conda create -n pointnet python=3.8.10
+  conda activate pointnet
+  ```
 
 # Download data and running
 
