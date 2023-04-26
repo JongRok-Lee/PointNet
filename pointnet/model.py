@@ -24,7 +24,9 @@ class STN3d(nn.Module):
         self.bn3 = nn.BatchNorm1d(1024)
         self.bn4 = nn.BatchNorm1d(512)
         self.bn5 = nn.BatchNorm1d(256)
-
+        
+        self.fc3.weight.data.zero_()
+        self.fc3.bias.data.copy_(torch.from_numpy(np.eye(3).flatten()).float())
 
     def forward(self, x):
         batchsize = x.size()[0]
@@ -33,16 +35,11 @@ class STN3d(nn.Module):
         x = F.relu(self.bn3(self.conv3(x)))
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
-        print(f"view: {x.shape}")
 
         x = F.relu(self.bn4(self.fc1(x)))
         x = F.relu(self.bn5(self.fc2(x)))
         x = self.fc3(x)
 
-        iden = Variable(torch.from_numpy(np.array([1,0,0,0,1,0,0,0,1]).astype(np.float32))).view(1,9).repeat(batchsize,1)
-        if x.is_cuda:
-            iden = iden.cuda()
-        x = x + iden
         x = x.view(-1, 3, 3)
         return x
 
@@ -64,6 +61,9 @@ class STNkd(nn.Module):
         self.bn4 = nn.BatchNorm1d(512)
         self.bn5 = nn.BatchNorm1d(256)
 
+        self.fc3.weight.data.zero_()
+        self.fc3.bias.data.copy_(torch.from_numpy(np.eye(self.k).flatten()).float())
+
         self.k = k
 
     def forward(self, x):
@@ -78,10 +78,6 @@ class STNkd(nn.Module):
         x = F.relu(self.bn5(self.fc2(x)))
         x = self.fc3(x)
 
-        iden = Variable(torch.from_numpy(np.eye(self.k).flatten().astype(np.float32))).view(1,self.k*self.k).repeat(batchsize,1)
-        if x.is_cuda:
-            iden = iden.cuda()
-        x = x + iden
         x = x.view(-1, self.k, self.k)
         return x
 

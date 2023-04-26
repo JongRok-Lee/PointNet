@@ -10,6 +10,7 @@ from pointnet.dataset import ShapeNetDataset, ModelNetDataset
 from pointnet.model import PointNetCls, feature_transform_regularizer
 import torch.nn.functional as F
 from tqdm import tqdm
+import wandb
 
 
 parser = argparse.ArgumentParser()
@@ -99,6 +100,8 @@ if opt.mode == 'gpu':
 
 num_batch = len(dataset) / opt.batchSize
 
+wandb.init(project="pointnet")
+
 for epoch in range(opt.nepoch):
     for i, data in enumerate(dataloader, 0):
         points, target = data
@@ -117,6 +120,7 @@ for epoch in range(opt.nepoch):
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
         print('[%d: %d/%d] train loss: %f accuracy: %f' % (epoch, i, num_batch, loss.item(), correct.item() / float(opt.batchSize)))
+        wandb.log({"train_loss": loss.item(), "train_accuracy": correct.item() / float(opt.batchSize)})
 
         if i % 10 == 0:
             j, data = next(enumerate(testdataloader, 0))
@@ -131,6 +135,7 @@ for epoch in range(opt.nepoch):
             pred_choice = pred.data.max(1)[1]
             correct = pred_choice.eq(target.data).cpu().sum()
             print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), correct.item()/float(opt.batchSize)))
+            wandb.log({"test_loss": loss.item(), "test_accuracy": correct.item() / float(opt.batchSize)})
 
     scheduler.step()
 
@@ -152,3 +157,4 @@ for i,data in tqdm(enumerate(testdataloader, 0)):
     total_testset += points.size()[0]
 
 print("final accuracy {}".format(total_correct / float(total_testset)))
+wandb.finish()

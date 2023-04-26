@@ -20,6 +20,9 @@ class STN3D(nn.Module):
         self.bn3 = nn.BatchNorm1d(1024)
         self.bn4 = nn.BatchNorm1d(512)
         self.bn5 = nn.BatchNorm1d(256)
+        self.fc3.weight.data.zero_()
+        self.fc3.bias.data.copy_(torch.tensor([1, 0, 0, 0, 1, 0, 0, 0, 1]).float())
+        
 
     def forward(self, x):
         batchsize = x.size()[0]
@@ -41,17 +44,6 @@ class STN3D(nn.Module):
         x = self.fc3(x)
         print(f"fc3: {x.shape}")
 
-        iden = Variable(torch.from_numpy(np.array([1,0,0,0,1,0,0,0,1]).astype(np.float32))).view(1,9).repeat(batchsize,1)
-        iden2 = torch.Tensor([1, 0, 0, 0, 1, 0, 0, 0, 1], requires_grad=True).repeat(batchsize, 1)
-        print(f"iden2: {iden2.shape}, dtype: {iden2.dtype}")
-        print(iden2)
-        print(f"iden: {iden.shape}, dtype: {iden.dtype}")
-        print(iden)
-        print(f"x: {x}")
-        if x.is_cuda:
-            iden = iden.cuda()
-        x = x + iden
-        print(f"add: {x.shape}")
         x = x.view(-1, 3, 3)
         print(f"view: {x.shape}")
         return x
