@@ -20,6 +20,7 @@ parser.add_argument(
     '--workers', type=int, help='number of data loading workers', default=4)
 parser.add_argument(
     '--nepoch', type=int, default=25, help='number of epochs to train for')
+parser.add_argument('--mode', type=str, default='cpu', help='cpu|gpu')
 parser.add_argument('--outf', type=str, default='seg', help='output folder')
 parser.add_argument('--model', type=str, default='', help='model path')
 parser.add_argument('--dataset', type=str, required=True, help="dataset path")
@@ -73,7 +74,9 @@ if opt.model != '':
 
 optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-classifier.cuda()
+criterion = torch.nn.CrossEntropyLoss()
+if opt.mode == 'gpu':
+    classifier.cuda()
 
 num_batch = len(dataset) / opt.batchSize
 
@@ -82,17 +85,18 @@ for epoch in range(opt.nepoch):
     for i, data in enumerate(dataloader, 0):
         points, target = data
         points = points.transpose(2, 1)
-        points, target = points.cuda(), target.cuda()
+        if opt.mode == 'gpu':
+            points, target = points.cuda(), target.cuda()
         optimizer.zero_grad()
         classifier = classifier.train()
         pred, trans, trans_feat = classifier(points)
         pred = pred.view(-1, num_classes)
         target = target.view(-1, 1)[:, 0] - 1
-        #print(pred.size(), target.size())
-        loss = F.nll_loss(pred, target)
+        loss = criterion(pred, target)
         if opt.feature_transform:
-            loss += feature_transform_regularizer(trans_feat) * 0.001
-        loss.backward()
+            regulation_loss = feature_transform_regularizer(trans_feat) * 0.001
+            loss_sum = loss + regulation_loss
+        loss_sum.backward()
         optimizer.step()
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
@@ -102,12 +106,13 @@ for epoch in range(opt.nepoch):
             j, data = next(enumerate(testdataloader, 0))
             points, target = data
             points = points.transpose(2, 1)
-            points, target = points.cuda(), target.cuda()
+            if opt.mode == 'gpu':
+                points, target = points.cuda(), target.cuda()
             classifier = classifier.eval()
             pred, _, _ = classifier(points)
             pred = pred.view(-1, num_classes)
             target = target.view(-1, 1)[:, 0] - 1
-            loss = F.nll_loss(pred, target)
+            loss = criterion(pred, target)
             pred_choice = pred.data.max(1)[1]
             correct = pred_choice.eq(target.data).cpu().sum()
             print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), correct.item()/float(opt.batchSize * 2500)))
@@ -119,7 +124,8 @@ shape_ious = []
 for i,data in tqdm(enumerate(testdataloader, 0)):
     points, target = data
     points = points.transpose(2, 1)
-    points, target = points.cuda(), target.cuda()
+    if opt.mode == 'gpu':
+        points, target = points.cuda(), target.cuda()
     classifier = classifier.eval()
     pred, _, _ = classifier(points)
     pred_choice = pred.data.max(2)[1]

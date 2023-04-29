@@ -95,6 +95,7 @@ if opt.model != '':
 
 optimizer = optim.Adam(classifier.parameters(), lr=0.001, betas=(0.9, 0.999))
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+criterion = torch.nn.CrossEntropyLoss()
 if opt.mode == 'gpu':
     classifier.cuda()
 
@@ -112,10 +113,11 @@ for epoch in range(opt.nepoch):
         optimizer.zero_grad()
         classifier = classifier.train()
         pred, trans, trans_feat = classifier(points)
-        loss = F.nll_loss(pred, target)
+        loss = criterion(pred, target)
         if opt.feature_transform:
-            loss += feature_transform_regularizer(trans_feat) * 0.001
-        loss.backward()
+            regulation_loss = feature_transform_regularizer(trans_feat) * 0.001
+            loss_sum = loss + regulation_loss
+        loss_sum.backward()
         optimizer.step()
         pred_choice = pred.data.max(1)[1]
         correct = pred_choice.eq(target.data).cpu().sum()
@@ -131,7 +133,7 @@ for epoch in range(opt.nepoch):
                 points, target = points.cuda(), target.cuda()
             classifier = classifier.eval()
             pred, _, _ = classifier(points)
-            loss = F.nll_loss(pred, target)
+            loss = criterion(pred, target)
             pred_choice = pred.data.max(1)[1]
             correct = pred_choice.eq(target.data).cpu().sum()
             print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('test'), loss.item(), correct.item()/float(opt.batchSize)))

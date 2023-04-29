@@ -49,7 +49,19 @@ class STN3D(nn.Module):
         return x
     
 model = STN3D()
-input_tensor = torch.randn(2, 3, 512)
+input_tensor = torch.randn(10, 3, 512)
 print(f"input_tensor: {input_tensor.shape}")
 
-output = model(input_tensor)
+print(f"#######################")
+print("Start STN3D")
+transform_matrix = model(input_tensor)
+print(f"#######################")
+
+input_tensor_for_matrix_multiplication = input_tensor.transpose(2, 1)
+print(f"input_tensor_for_matrix_multiplication: {input_tensor_for_matrix_multiplication.shape}")
+
+output = torch.bmm(input_tensor_for_matrix_multiplication, transform_matrix)
+print(f"output: {output.shape}")
+
+reshape_output = output.transpose(2, 1)
+print(f"reshape_output: {reshape_output.shape}")
