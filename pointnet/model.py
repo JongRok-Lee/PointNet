@@ -167,8 +167,6 @@ class PointNetDenseCls(nn.Module):
         self.bn3 = nn.BatchNorm1d(128)
 
     def forward(self, x):
-        batchsize = x.size()[0]
-        n_pts = x.size()[2]
         x, trans, trans_feat = self.feat(x)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
@@ -180,7 +178,6 @@ class PointNetDenseCls(nn.Module):
 
 def feature_transform_regularizer(trans):
     d = trans.size()[1]
-    batchsize = trans.size()[0]
     I = torch.eye(d)[None, :, :]
     if trans.is_cuda:
         I = I.cuda()
